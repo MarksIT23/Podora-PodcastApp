@@ -6,7 +6,6 @@ import { Container } from '../components/layout';
 import { Play, Headphones, TrendingUp, Zap, Pause } from 'lucide-react';
 import { useAudio } from '../components/AudioPlayer';
 import { fetchLatestEpisodes } from '../services/public';
-import { fetchAnalytics } from '../services/data';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -322,10 +321,10 @@ export default function Hero({ introComplete }) {
 
   useEffect(() => {
     let mounted = true;
-    fetchAnalytics()
-      .then((res) => {
-        // `fetchAnalytics` may return the payload or an object with `data`
-        const payload = res?.data ?? res ?? {};
+    fetch('/api/stats')
+      .then((r) => r.ok ? r.json() : null)
+      .then((json) => {
+        const payload = json?.data ?? {};
         if (!mounted) return;
         setAnalytics(payload);
         const plays = payload.totalPlays ? payload.totalPlays.toLocaleString() : '0';
@@ -336,8 +335,7 @@ export default function Hero({ introComplete }) {
           { icon: Zap, label: 'AI Powered', color: '#3B82F6' },
         ]);
       })
-      .catch(() => {})
-      .finally(() => { /* no-op */ });
+      .catch(() => {});
     return () => { mounted = false; };
   }, []);
 
@@ -487,6 +485,9 @@ export default function Hero({ introComplete }) {
             {/* CTAs */}
             <div ref={ctaRef} className="flex flex-wrap gap-4 mb-12">
               <button
+                onClick={() => {
+                  document.getElementById('podcasts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
                 className="group relative inline-flex items-center gap-3 font-semibold overflow-hidden"
                 style={{
                   padding: '14px 32px',

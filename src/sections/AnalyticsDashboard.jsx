@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container } from '../components/layout';
-import { ArrowUp, ArrowDown, TrendingUp, Users, Headphones, Clock, BarChart3, Activity } from 'lucide-react';
+import { ArrowUp, ArrowDown, TrendingUp, Users, Headphones, Clock, BarChart3, Activity, Mic } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 

@@ -56,3 +56,14 @@ body {
 ::placeholder {
   color: rgba(255, 255, 255, 0.25);
 }
+
+/* ─── Select / Dropdown contrast fix ─── */
+select {
+  color: var(--text-primary, #fff);
+  background: var(--color-surface, #181818);
+}
+
+select option {
+  color: var(--text-primary, #fff);
+  background: var(--color-surface, #181818);
+}
