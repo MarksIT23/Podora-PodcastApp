@@ -26,3 +26,23 @@ server/prisma/mongodb_*.json
 *.njsproj
 *.sln
 *.sw?
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+server/prisma/*.db
+
+# Local MongoDB runtime data
+server/data/
+
+# Ad-hoc debug scripts
+server/_check.mjs
