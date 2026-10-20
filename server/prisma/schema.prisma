@@ -98,6 +98,7 @@ model Episode {
   host   String @default("")
   plays  Int    @default(0)
   tags   String @default("[]") // JSON array
+  status String @default("published") // published | hidden
   history ListeningHistory[]
   playlistEntries PlaylistEpisode[]
   highlights      Highlight[]
@@ -160,6 +161,28 @@ model Setting {
   key       String   @unique
   value     String   // JSON-encoded value
   updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Review Queue
+// ============================================
+
+model ReviewItem {
+  id        String   @id @default(uuid())
+  episodeId String
+  feedId    String?
+  podcastId String?
+  title     String
+  reason    String   @default("")        // flag_reason: duplicate | inappropriate | broken_audio | user_report | other
+  status    String   @default("pending") // pending | reviewed | dismissed
+  notes     String   @default("")
+  flaggedBy String   @default("system")  // user ID or "system"
+  reviewedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([episodeId])
 }
 
 // ============================================

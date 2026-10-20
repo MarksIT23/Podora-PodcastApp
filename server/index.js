@@ -1,11 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import cron from 'node-cron';
 
+import { loginSchema, registerSchema, validateBody } from './validation/schemas.js';
 import feedRoutes from './routes/feeds.js';
 import jobRoutes from './routes/jobs.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -17,6 +19,7 @@ import activityRoutes from './routes/activity.js';
 import userDataRoutes from './routes/user-data.js';
 import settingsRoutes from './routes/settings.js';
 import highlightRoutes from './routes/highlights.js';
+import reviewRoutes from './routes/reviews.js';
 import { startIngestionJob } from './jobs/ingestion.js';
 import { startHighlightDetectionJob } from './jobs/highlight-detection.js';
 import publicRoutes from './routes/public.js';
@@ -34,6 +37,32 @@ const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supaba
 if (supabase) {
   console.log('[Sync System] Real-time Supabase replication configured.');
 }
+
+const supabaseTablesOk = new Map();
+const supabaseTableErrorPatterns = ['not found', 'not find', 'does not exist', 'relation'];
+
+function isSupabaseTableError(error) {
+  if (!error || !error.message) return false;
+  const msg = error.message.toLowerCase();
+  return supabaseTableErrorPatterns.some(p => msg.includes(p));
+}
+
+async function ensureSupabaseTables() {
+  if (!supabase) return;
+  const tables = ['podcast', 'episode', 'category', 'highlight', 'highlightcollection'];
+  for (const name of tables) {
+    const { error } = await supabase.from(name).select('id', { count: 'exact', head: true });
+    if (error) {
+      console.warn(`[Supabase] Table "public.${name}" not found — sync skipped for this table. Create it in your Supabase dashboard SQL editor.`);
+      supabaseTablesOk.set(name, false);
+    } else {
+      supabaseTablesOk.set(name, true);
+    }
+  }
+}
+
+// Await the check before the server starts accepting requests
+await ensureSupabaseTables().catch(() => {});
 
 async function replicateToOthers(model, action, data) {
   try {
@@ -54,32 +83,30 @@ async function replicateToOthers(model, action, data) {
     // 2. Replicate to User's Supabase (PostgreSQL) database
     if (supabase) {
       const tableName = model.toLowerCase();
-      // Only replicate core entities to prevent schema errors in Supabase unless tables exist
       const supportedTables = ['podcast', 'episode', 'category', 'highlight', 'highlightcollection'];
-      if (supportedTables.includes(tableName)) {
+      if (supportedTables.includes(tableName) && supabaseTablesOk.get(tableName)) {
         if (action === 'create') {
-          // Exclude relational objects
           const cleanData = { ...data };
           delete cleanData.categories;
           delete cleanData.feeds;
           delete cleanData.episodes;
           const { error } = await supabase.from(tableName).insert([cleanData]);
-          if (error) console.warn(`[Supabase Sync Warning] Insert on ${tableName} failed:`, error.message);
+          if (error && !isSupabaseTableError(error)) console.warn(`[Supabase Sync Warning] Insert on ${tableName} failed:`, error.message);
         } else if (action === 'update') {
           const cleanData = { ...data };
           delete cleanData.categories;
           delete cleanData.feeds;
           delete cleanData.episodes;
           const { error } = await supabase.from(tableName).update(cleanData).eq('id', data.id);
-          if (error) console.warn(`[Supabase Sync Warning] Update on ${tableName} failed:`, error.message);
+          if (error && !isSupabaseTableError(error)) console.warn(`[Supabase Sync Warning] Update on ${tableName} failed:`, error.message);
         } else if (action === 'delete') {
           const { error } = await supabase.from(tableName).delete().eq('id', data.id);
-          if (error) console.warn(`[Supabase Sync Warning] Delete on ${tableName} failed:`, error.message);
+          if (error && !isSupabaseTableError(error)) console.warn(`[Supabase Sync Warning] Delete on ${tableName} failed:`, error.message);
         }
       }
     }
   } catch (err) {
-    console.warn(`[Supabase Sync Warning] Failed to sync ${model} ${action}:`, err.message);
+    if (!isSupabaseTableError(err)) console.warn(`[Supabase Sync Warning] Failed to sync ${model} ${action}:`, err.message);
   }
 }
 
@@ -108,6 +135,35 @@ const prisma = rawPrisma.$extends({
 const app = express();
 const PORT = process.env.ADMIN_PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'admin-secret-key-change-in-production';
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+function apiRateLimit(req, res, next) {
+  try {
+    const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+      const token = header.split(' ')[1];
+      const user = jwt.verify(token, JWT_SECRET);
+      if (user.role === 'admin' || user.role === 'editor') return next();
+    }
+  } catch {}
+  apiLimiter(req, res, next);
+}
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -144,7 +200,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Login (unprotected)
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.adminUser.findUnique({ where: { email } });
@@ -159,10 +215,10 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 // Public routes (no auth required)
-app.use('/api', publicRoutes(prisma));
+app.use('/api', apiLimiter, publicRoutes(prisma));
 
 // Public registration
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', authLimiter, validateBody(registerSchema), async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -206,7 +262,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // Public user login
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.appUser.findUnique({ where: { email } });
@@ -224,7 +280,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // All routes below are protected
-app.use('/api/admin', authenticate);
+app.use('/api/admin', apiRateLimit, authenticate);
 
 // Apply role restrictions to specific paths BEFORE mounting routers
 app.use('/api/admin/feeds', authorize(['admin']));
@@ -244,6 +300,7 @@ app.use('/api/admin', activityRoutes(prisma));
 app.use('/api/admin', userDataRoutes(prisma));
 app.use('/api/admin', settingsRoutes(prisma));
 app.use('/api/admin', highlightRoutes(prisma));
+app.use('/api/admin', reviewRoutes(prisma));
 
 // Start RSS ingestion cron (every 15 minutes)
 startIngestionJob(prisma);
