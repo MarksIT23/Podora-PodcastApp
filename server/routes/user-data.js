@@ -31,6 +31,7 @@ export default function userDataRoutes(prisma) {
         episodeTitle: h.episode.title,
         podcastTitle: h.episode.feed?.podcast?.title || '',
         podcastId: h.episode.feed?.podcastId || null,
+        coverImage: h.episode.feed?.podcast?.coverImage || '',
         podcastEmoji: '🎧',
         playedAt: h.playedAt.toISOString(),
         duration: h.episode.duration ? String(h.episode.duration) : '',
@@ -223,7 +224,7 @@ export default function userDataRoutes(prisma) {
         include: {
           episode: {
             include: {
-              feed: { select: { podcastId: true, podcast: { select: { title: true } } } },
+              feed: { select: { podcastId: true, podcast: { select: { title: true, coverImage: true } } } },
             },
           },
         },
@@ -236,6 +237,7 @@ export default function userDataRoutes(prisma) {
         episodeTitle: e.episode.title,
         podcastTitle: e.episode.feed?.podcast?.title || '',
         podcastId: e.episode.feed?.podcastId || null,
+        coverImage: e.episode.feed?.podcast?.coverImage || '',
         duration: e.episode.duration || 0,
         audioUrl: e.episode.audioUrl,
         addedAt: e.createdAt.toISOString(),

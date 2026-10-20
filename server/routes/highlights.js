@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { detectHighlightsForEpisode } from '../jobs/highlight-detection.js';
+import { updateHighlightSchema, createCollectionSchema, updateCollectionSchema, validateBody } from '../validation/schemas.js';
 
 export default function highlightRoutes(prisma) {
   const router = Router();
@@ -24,7 +25,12 @@ export default function highlightRoutes(prisma) {
           take: Number(pageSize),
           orderBy: { createdAt: 'desc' },
           include: {
-            episode: { select: { id: true, title: true, duration: true, audioUrl: true } },
+            episode: {
+              select: {
+                id: true, title: true, duration: true, audioUrl: true,
+                feed: { select: { podcast: { select: { coverImage: true } } } },
+              },
+            },
             collection: { select: { id: true, name: true, slug: true, color: true } },
             segments: true,
           },
@@ -44,7 +50,12 @@ export default function highlightRoutes(prisma) {
       const highlight = await prisma.highlight.findUnique({
         where: { id: req.params.id },
         include: {
-          episode: { select: { id: true, title: true, duration: true, audioUrl: true } },
+          episode: {
+            select: {
+              id: true, title: true, duration: true, audioUrl: true,
+              feed: { select: { podcast: { select: { coverImage: true } } } },
+            },
+          },
           collection: { select: { id: true, name: true, slug: true, color: true } },
           segments: true,
         },
@@ -57,7 +68,7 @@ export default function highlightRoutes(prisma) {
   });
 
   // Update highlight
-  router.put('/highlights/:id', async (req, res) => {
+  router.put('/highlights/:id', validateBody(updateHighlightSchema), async (req, res) => {
     try {
       const { title, description, startTime, endTime, status, tags, collectionId } = req.body;
       const data = {};
@@ -73,7 +84,7 @@ export default function highlightRoutes(prisma) {
         where: { id: req.params.id },
         data,
         include: {
-          episode: { select: { id: true, title: true } },
+          episode: { select: { id: true, title: true, feed: { select: { podcast: { select: { coverImage: true } } } } } },
           collection: { select: { id: true, name: true, slug: true } },
           segments: true,
         },
@@ -154,10 +165,9 @@ export default function highlightRoutes(prisma) {
     }
   });
 
-  router.post('/highlight-collections', async (req, res) => {
+  router.post('/highlight-collections', validateBody(createCollectionSchema), async (req, res) => {
     try {
       const { name, description, slug, coverImage, color } = req.body;
-      if (!name) return res.status(400).json({ error: 'name is required' });
 
       const collection = await prisma.highlightCollection.create({
         data: {
@@ -175,15 +185,9 @@ export default function highlightRoutes(prisma) {
     }
   });
 
-  router.put('/highlight-collections/:id', async (req, res) => {
+  router.put('/highlight-collections/:id', validateBody(updateCollectionSchema), async (req, res) => {
     try {
       const { name, description, slug, coverImage, color } = req.body;
-      const data = {};
-      if (name !== undefined) data.name = name;
-      if (description !== undefined) data.description = description;
-      if (slug !== undefined) data.slug = slug;
-      if (coverImage !== undefined) data.coverImage = coverImage;
-      if (color !== undefined) data.color = color;
 
       const updated = await prisma.highlightCollection.update({
         where: { id: req.params.id },

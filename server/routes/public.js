@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'admin-secret-key-change-in-production';
+
 const optionalAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader) {
     const token = authHeader.split(' ')[1];
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'supersecret');
+      const payload = jwt.verify(token, JWT_SECRET);
       req.user = payload;
     } catch {
       // ignore
