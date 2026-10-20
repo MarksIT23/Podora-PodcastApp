@@ -1,19 +1,14 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { createUserSchema, updateUserStatusSchema, updateUserRoleSchema, changePasswordSchema, validateBody } from '../validation/schemas.js';
 
 export default function userRoutes(prisma) {
   const router = Router();
 
   // Create user (admin)
-  router.post('/users', async (req, res) => {
+  router.post('/users', validateBody(createUserSchema), async (req, res) => {
     try {
       const { name, email, password, role } = req.body;
-      if (!name || !email || !password) {
-        return res.status(400).json({ error: 'name, email, and password are required' });
-      }
-      if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
-      }
 
       const existing = await prisma.appUser.findUnique({ where: { email } });
       if (existing) return res.status(409).json({ error: 'Email already registered' });
@@ -120,10 +115,9 @@ export default function userRoutes(prisma) {
   });
 
   // Update user status
-  router.put('/users/:id/status', async (req, res) => {
+  router.put('/users/:id/status', validateBody(updateUserStatusSchema), async (req, res) => {
     try {
       const { status } = req.body;
-      if (!status) return res.status(400).json({ error: 'status is required' });
 
       await prisma.appUser.update({
         where: { id: req.params.id },
@@ -137,7 +131,7 @@ export default function userRoutes(prisma) {
   });
 
   // Update user role
-  router.put('/users/:id/role', async (req, res) => {
+  router.put('/users/:id/role', validateBody(updateUserRoleSchema), async (req, res) => {
     try {
       const { role } = req.body;
       if (!role) return res.status(400).json({ error: 'role is required' });
@@ -154,15 +148,9 @@ export default function userRoutes(prisma) {
   });
 
   // Change password
-  router.put('/users/:id/password', async (req, res) => {
+  router.put('/users/:id/password', validateBody(changePasswordSchema), async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ error: 'currentPassword and newPassword are required' });
-      }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
-      }
 
       const user = await prisma.appUser.findUnique({ where: { id: req.params.id } });
       if (!user) return res.status(404).json({ error: 'User not found' });

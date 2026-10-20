@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { updateSettingsSchema, validateBody } from '../validation/schemas.js';
 
 export default function settingsRoutes(prisma) {
   const router = Router();
@@ -18,12 +19,9 @@ export default function settingsRoutes(prisma) {
   });
 
   // PUT — upsert settings by section
-  router.put('/settings', async (req, res) => {
+  router.put('/settings', validateBody(updateSettingsSchema), async (req, res) => {
     try {
       const entries = req.body; // { 'general': {...}, 'integrations': {...}, ... }
-      if (!entries || typeof entries !== 'object') {
-        return res.status(400).json({ error: 'Expected object of setting sections' });
-      }
 
       for (const [key, value] of Object.entries(entries)) {
         await prisma.setting.upsert({

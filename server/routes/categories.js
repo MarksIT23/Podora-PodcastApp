@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createCategorySchema, updateCategorySchema, validateBody } from '../validation/schemas.js';
 
 export default function categoryRoutes(prisma) {
   const router = Router();
@@ -27,10 +28,9 @@ export default function categoryRoutes(prisma) {
   });
 
   // Create category
-  router.post('/categories', async (req, res) => {
+  router.post('/categories', validateBody(createCategorySchema), async (req, res) => {
     try {
       const { name, slug, description, color } = req.body;
-      if (!name || !slug) return res.status(400).json({ error: 'name and slug are required' });
 
       const category = await prisma.category.create({
         data: { name, slug, description: description || '', color: color || '#6366f1' },
@@ -53,14 +53,9 @@ export default function categoryRoutes(prisma) {
   });
 
   // Update category
-  router.put('/categories/:id', async (req, res) => {
+  router.put('/categories/:id', validateBody(updateCategorySchema), async (req, res) => {
     try {
       const { name, slug, description, color } = req.body;
-      const data = {};
-      if (name !== undefined) data.name = name;
-      if (slug !== undefined) data.slug = slug;
-      if (description !== undefined) data.description = description;
-      if (color !== undefined) data.color = color;
 
       const category = await prisma.category.update({
         where: { id: req.params.id },
