@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Mic, Users, BarChart3, Settings, LogOut, Rss, Sparkles,
-  ChevronLeft, ChevronRight, Menu, Shield, Headphones,
+  ChevronLeft, ChevronRight, Menu, Shield, Headphones, FileText, ListChecks, Database,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -14,6 +14,9 @@ const NAV_ITEMS = [
   { to: '/admin/feeds', label: 'Feeds', icon: Rss, roles: ['admin'] },
   { to: '/admin/highlights', label: 'Highlights', icon: Sparkles, roles: ['admin', 'moderator'] },
   { to: '/admin/highlights/collections', label: 'Collections', icon: Sparkles, roles: ['admin', 'moderator'] },
+  { to: '/admin/reviews', label: 'Review Queue', icon: ListChecks, roles: ['admin', 'moderator'] },
+  { to: '/admin/raw-data', label: 'Raw Data', icon: Database, roles: ['admin', 'moderator'] },
+  { to: '/editor/articles', label: 'Articles', icon: FileText, roles: ['admin', 'moderator'] },
   { to: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   { to: '/admin/settings', label: 'Settings', icon: Settings, roles: ['admin'] },

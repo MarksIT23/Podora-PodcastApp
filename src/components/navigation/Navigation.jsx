@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: 'Home', href: '/#home' },
   { label: 'Podcasts', href: '/#podcasts' },
   { label: 'Discover', href: '/#discover' },
+  { label: 'Articles', href: '/articles' },
   { label: 'AI Highlights', href: '/highlights' },
   { label: 'Analytics', href: '/#analytics' },
 ];

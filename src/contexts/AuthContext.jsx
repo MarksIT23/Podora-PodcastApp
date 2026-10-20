@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -6,6 +7,8 @@ const AuthContext = createContext(null);
 const STORAGE_KEY = 'podcastai_auth';
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -33,6 +36,18 @@ export function AuthProvider({ children }) {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Listen for 401 session expiry from axios interceptor
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem(STORAGE_KEY);
+      navigate('/auth', { replace: true });
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, [navigate]);
 
   // Restore saved theme preference on mount
   useEffect(() => {

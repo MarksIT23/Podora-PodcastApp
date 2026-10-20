@@ -27,14 +27,20 @@ const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const EditorDashboard = lazy(() => import('./pages/admin/EditorDashboard'));
+const EditorArticles = lazy(() => import('./pages/admin/EditorArticles'));
+const EditorArticleEdit = lazy(() => import('./pages/admin/EditorArticleEdit'));
 const AdminFeeds = lazy(() => import('./pages/admin/AdminFeeds'));
 const AdminHighlights = lazy(() => import('./pages/admin/AdminHighlights'));
 const AdminHighlightEditor = lazy(() => import('./pages/admin/AdminHighlightEditor'));
 const AdminHighlightCollections = lazy(() => import('./pages/admin/AdminHighlightCollections'));
+const AdminReviewQueue = lazy(() => import('./pages/admin/AdminReviewQueue'));
+const AdminRawData = lazy(() => import('./pages/admin/AdminRawData'));
 const PodcastDetailPage = lazy(() => import('./pages/PodcastDetailPage'));
 const SearchResultsPage = lazy(() => import('./pages/SearchResultsPage'));
 const CategoryBrowsePage = lazy(() => import('./pages/CategoryBrowsePage'));
 const PodcastsPage = lazy(() => import('./pages/PodcastsPage'));
+const ArticlesPage = lazy(() => import('./pages/ArticlesPage'));
+const ArticleDetailPage = lazy(() => import('./pages/ArticleDetailPage'));
 const HighlightsPage = lazy(() => import('./pages/HighlightsPage'));
 const HighlightDetailPage = lazy(() => import('./pages/HighlightDetailPage'));
 const HighlightCollectionPage = lazy(() => import('./pages/HighlightCollectionPage'));
@@ -114,6 +120,32 @@ function AppContent({ introComplete }) {
               }
             />
             <Route
+              path="/articles"
+              element={
+                <motion.div
+                  key="articles"
+                  initial={pageTransition.initial}
+                  animate={pageTransition.animate}
+                  exit={pageTransition.exit}
+                >
+                  <ArticlesPage />
+                </motion.div>
+              }
+            />
+            <Route
+              path="/article/:id"
+              element={
+                <motion.div
+                  key="article-detail"
+                  initial={pageTransition.initial}
+                  animate={pageTransition.animate}
+                  exit={pageTransition.exit}
+                >
+                  <ArticleDetailPage />
+                </motion.div>
+              }
+            />
+            <Route
               path="/highlights"
               element={
                 <motion.div
@@ -127,19 +159,6 @@ function AppContent({ introComplete }) {
               }
             />
             <Route
-              path="/highlights/:id"
-              element={
-                <motion.div
-                  key="highlight-detail"
-                  initial={pageTransition.initial}
-                  animate={pageTransition.animate}
-                  exit={pageTransition.exit}
-                >
-                  <HighlightDetailPage />
-                </motion.div>
-              }
-            />
-            <Route
               path="/highlights/collection/:slug"
               element={
                 <motion.div
@@ -149,6 +168,19 @@ function AppContent({ introComplete }) {
                   exit={pageTransition.exit}
                 >
                   <HighlightCollectionPage />
+                </motion.div>
+              }
+            />
+            <Route
+              path="/highlights/:id"
+              element={
+                <motion.div
+                  key="highlight-detail"
+                  initial={pageTransition.initial}
+                  animate={pageTransition.animate}
+                  exit={pageTransition.exit}
+                >
+                  <HighlightDetailPage />
                 </motion.div>
               }
             />
@@ -403,6 +435,58 @@ function AppContent({ introComplete }) {
                     exit={pageTransition.exit}
                   >
                     <AdminHighlightEditor />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/admin/reviews"
+                element={
+                  <motion.div
+                    key="admin-reviews"
+                    initial={pageTransition.initial}
+                    animate={pageTransition.animate}
+                    exit={pageTransition.exit}
+                  >
+                    <AdminReviewQueue />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/admin/raw-data"
+                element={
+                  <motion.div
+                    key="admin-raw-data"
+                    initial={pageTransition.initial}
+                    animate={pageTransition.animate}
+                    exit={pageTransition.exit}
+                  >
+                    <AdminRawData />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/editor/articles"
+                element={
+                  <motion.div
+                    key="editor-articles"
+                    initial={pageTransition.initial}
+                    animate={pageTransition.animate}
+                    exit={pageTransition.exit}
+                  >
+                    <EditorArticles />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/editor/articles/:id"
+                element={
+                  <motion.div
+                    key="editor-article-edit"
+                    initial={pageTransition.initial}
+                    animate={pageTransition.animate}
+                    exit={pageTransition.exit}
+                  >
+                    <EditorArticleEdit />
                   </motion.div>
                 }
               />
