@@ -283,7 +283,7 @@ export default function UserLibrary() {
                                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors group/ep"
                               >
                                 <button
-                                  onClick={() => play({ id: ep.episodeId, audioUrl: ep.audioUrl, title: ep.episodeTitle })}
+                                  onClick={() => play({ id: ep.episodeId, audioUrl: ep.audioUrl, title: ep.episodeTitle, coverImage: ep.coverImage })}
                                   className="w-8 h-8 rounded-full bg-[var(--color-accent-purple)]/20 flex items-center justify-center shrink-0 hover:bg-[var(--color-accent-purple)] transition-colors"
                                 >
                                   <Play size={12} className="text-[var(--color-accent-purple-light)] ml-0.5" fill="currentColor" />
@@ -355,7 +355,7 @@ export default function UserLibrary() {
                 >
                   <span className="text-xl hidden sm:block" aria-hidden="true">{item.podcastEmoji || '🎙️'}</span>
                   <button
-                    onClick={() => play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle })}
+                    onClick={() => play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle, coverImage: item.coverImage })}
                     className="w-9 h-9 rounded-full bg-[var(--color-accent-purple)] flex items-center justify-center shrink-0 hover:bg-[var(--color-accent-purple-light)] transition-colors"
                     aria-label={`Play ${item.episodeTitle}`}>
                     <Play size={14} className="text-white ml-0.5" fill="white" aria-hidden="true" />

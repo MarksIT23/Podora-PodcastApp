@@ -68,6 +68,7 @@ export default function UserDashboard() {
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -88,6 +89,9 @@ export default function UserDashboard() {
       setTotalPodcasts(podsRes.total);
       setTotalEpisodes(statsRes.data?.totalEpisodes || 0);
       setSavedCount((savedRes.data || []).length);
+      setLoading(false);
+    }).catch((err) => {
+      setError(err.message || 'Failed to load dashboard data');
       setLoading(false);
     });
   }, []);
@@ -120,6 +124,21 @@ export default function UserDashboard() {
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] animate-pulse" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title={`${greeting()}, ${user?.name?.split(' ')[0] || 'User'} 👋`} description="Something went wrong loading your data." />
+        <div className="p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-danger)]/30 text-center">
+          <p className="text-[var(--color-danger)] mb-2">Failed to load dashboard</p>
+          <p className="text-small text-[var(--text-tertiary)]">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 rounded-lg bg-[var(--color-accent-purple)] text-white text-small hover:brightness-110 transition-all">
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -181,8 +200,8 @@ export default function UserDashboard() {
               {history.slice(0, 3).map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle })}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle }); } }}
+                  onClick={() => play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle, coverImage: item.coverImage })}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play({ id: item.episodeId || item.id, audioUrl: item.audioUrl, title: item.episodeTitle, host: item.podcastTitle, podcastId: item.podcastId, podcastTitle: item.podcastTitle, coverImage: item.coverImage }); } }}
                   className="flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
                   tabIndex={0}
                   role="button"
@@ -262,8 +281,8 @@ export default function UserDashboard() {
             return (
               <div
                 key={ep.id || ep.episodeId}
-onClick={() => play({ id: ep.episodeId || ep.id, audioUrl: ep.audioUrl, title: ep.episodeTitle || ep.title, host: ep.podcastTitle || ep.host, podcastId: ep.podcastId, podcastTitle: ep.podcastTitle || ep.host })}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play({ id: ep.episodeId || ep.id, audioUrl: ep.audioUrl, title: ep.episodeTitle || ep.title, host: ep.podcastTitle || ep.host, podcastId: ep.podcastId, podcastTitle: ep.podcastTitle || ep.host }); } }}
+onClick={() => play({ id: ep.episodeId || ep.id, audioUrl: ep.audioUrl, title: ep.episodeTitle || ep.title, host: ep.podcastTitle || ep.host, podcastId: ep.podcastId, podcastTitle: ep.podcastTitle || ep.host, coverImage: ep.coverImage })}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play({ id: ep.episodeId || ep.id, audioUrl: ep.audioUrl, title: ep.episodeTitle || ep.title, host: ep.podcastTitle || ep.host, podcastId: ep.podcastId, podcastTitle: ep.podcastTitle || ep.host, coverImage: ep.coverImage }); } }}
                 className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] cursor-pointer"
                 tabIndex={0}
                 role="button"
