@@ -17,7 +17,12 @@ const AudioContext = createContext(null);
 
 export function AudioProvider({ children }) {
   const audioRef = useRef(null);
-  const [currentTrack, setCurrentTrack] = useState(null);
+  const [currentTrack, setCurrentTrack] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('podcast_current_track');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -32,6 +37,23 @@ export function AudioProvider({ children }) {
   const podcastEpisodesRef = useRef([]);
   const currentTrackRef = useRef(null);
   const [podcastEpisodes, setPodcastEpisodes] = useState([]);
+
+  // Restore audio source when track is revived from sessionStorage after page reload
+  useEffect(() => {
+    if (currentTrack?.audioUrl && audioRef.current && !audioRef.current.src) {
+      audioRef.current.src = currentTrack.audioUrl;
+      audioRef.current.load();
+    }
+  }, []);
+
+  // Persist current track to sessionStorage (survives page reloads)
+  useEffect(() => {
+    if (currentTrack) {
+      sessionStorage.setItem('podcast_current_track', JSON.stringify(currentTrack));
+    } else {
+      sessionStorage.removeItem('podcast_current_track');
+    }
+  }, [currentTrack]);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -179,6 +201,17 @@ export function AudioProvider({ children }) {
     queueRef.current = [];
   }, []);
 
+  const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    setCurrentTrack(null);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
+
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
   }, []);
@@ -230,7 +263,7 @@ export function AudioProvider({ children }) {
     queue, audioRef, podcastEpisodes,
     play, togglePlay, seek, setVolume, toggleMute,
     skipForward, skipBackward,
-    addToQueue, removeFromQueue, clearQueue,
+    addToQueue, removeFromQueue, clearQueue, stop,
   };
 
   return (
@@ -270,7 +303,7 @@ function formatTime(sec) {
    Now Playing Mini Bar — always visible
    ============================================ */
 function NowPlayingBar({ onExpand }) {
-  const { currentTrack, isPlaying, togglePlay, currentTime, duration, volume, isMuted, skipForward, skipBackward, seek, toggleMute } = useAudio();
+  const { currentTrack, isPlaying, togglePlay, currentTime, duration, volume, isMuted, skipForward, skipBackward, seek, toggleMute, stop } = useAudio();
   const barRef = useRef(null);
   const coverRef = useRef(null);
   const progressRef = useRef(null);
@@ -363,13 +396,27 @@ function NowPlayingBar({ onExpand }) {
               className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0"
               style={{ borderRadius: '10px', boxShadow: '0 0 15px rgba(139,61,255,0.15)' }}
             >
-              <div
+            {currentTrack?.coverImage ? (
+              <img
                 ref={coverRef}
-                className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-accent-purple)]/40 to-[var(--color-accent-orange)]/20"
+                src={currentTrack.coverImage}
+                alt={currentTrack.title}
+                className="w-full h-full object-cover"
                 style={{ transformOrigin: 'center center' }}
-              >
-                <Music size={18} className="text-white/70" />
-              </div>
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const fallback = e.target.parentElement?.querySelector('.fallback');
+                  if (fallback) fallback.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <div
+              ref={currentTrack?.coverImage ? undefined : coverRef}
+              className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-accent-purple)]/40 to-[var(--color-accent-orange)]/20 fallback ${currentTrack?.coverImage ? 'hidden' : ''}`}
+              style={{ transformOrigin: 'center center' }}
+            >
+              <Music size={18} className="text-white/70" />
+            </div>
             </div>
             <div className="min-w-0 hidden md:block">
               <p className="text-small font-medium text-[var(--text-primary)] truncate">
@@ -438,6 +485,17 @@ function NowPlayingBar({ onExpand }) {
               aria-label="Expand player"
             >
               <ChevronUp size={16} />
+            </button>
+
+            <button
+              onClick={stop}
+              className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--color-danger)] transition-colors ml-1"
+              aria-label="Close player"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
 
@@ -588,9 +646,23 @@ function FullPlayer({ onClose }) {
                         boxShadow: '0 0 60px rgba(139,61,255,0.2), 0 25px 60px rgba(0,0,0,0.5)',
                       }}
                     >
+                      {currentTrack?.coverImage ? (
+                        <img
+                          ref={coverRef}
+                          src={currentTrack.coverImage}
+                          alt={currentTrack.title}
+                          className="w-full h-full object-cover"
+                          style={{ transformOrigin: 'center center' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement?.querySelector('.fp-fallback');
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
                       <div
-                        ref={coverRef}
-                        className="w-full h-full flex items-center justify-center"
+                        ref={currentTrack?.coverImage ? undefined : coverRef}
+                        className={`w-full h-full flex items-center justify-center fp-fallback ${currentTrack?.coverImage ? 'hidden' : ''}`}
                         style={{ transformOrigin: 'center center' }}
                       >
                         <Disc size={60} className="text-white/30" />
