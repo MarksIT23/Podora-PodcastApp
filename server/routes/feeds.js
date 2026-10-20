@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createFeedSchema, validateBody } from '../validation/schemas.js';
 
 export default function feedRoutes(prisma) {
   const router = Router();
@@ -23,10 +24,9 @@ export default function feedRoutes(prisma) {
     }
   });
 
-  router.post('/feeds', async (req, res) => {
+  router.post('/feeds', validateBody(createFeedSchema), async (req, res) => {
     try {
       const { url, category, podcastId } = req.body;
-      if (!url) return res.status(400).json({ error: 'URL is required' });
       const feed = await prisma.feed.create({
         data: { url, category: category || null, podcastId: podcastId || null },
       });

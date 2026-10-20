@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { updateEpisodeSchema, validateBody } from '../validation/schemas.js';
 
 export default function episodeRoutes(prisma) {
   const router = Router();
@@ -56,6 +57,7 @@ export default function episodeRoutes(prisma) {
         tags: JSON.parse(e.tags || '[]'),
         audioUrl: e.audioUrl,
         published: !!e.publishedAt,
+        status: e.status || 'published',
         aiHighlights: highlightsByEpisode[e.id] || [],
       }));
 
@@ -96,6 +98,7 @@ export default function episodeRoutes(prisma) {
           tags: JSON.parse(episode.tags || '[]'),
           audioUrl: episode.audioUrl,
           published: !!episode.publishedAt,
+          status: episode.status || 'published',
           aiHighlights: episodeHighlights,
         },
       });
@@ -105,13 +108,14 @@ export default function episodeRoutes(prisma) {
   });
 
   // Update episode
-  router.put('/episodes/:id', async (req, res) => {
+  router.put('/episodes/:id', validateBody(updateEpisodeSchema), async (req, res) => {
     try {
-      const { title, description, published, tags } = req.body;
+      const { title, description, published, tags, status } = req.body;
       const data = {};
       if (title !== undefined) data.title = title;
       if (description !== undefined) data.description = description;
       if (tags !== undefined) data.tags = JSON.stringify(tags);
+      if (status !== undefined) data.status = status;
       
       if (published !== undefined) {
         if (published) {

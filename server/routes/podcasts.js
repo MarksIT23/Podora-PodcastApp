@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import {
+  createPodcastSchema,
+  updatePodcastSchema,
+  bulkUpdatePodcastsSchema,
+  validateBody,
+} from '../validation/schemas.js';
 
 export default function podcastRoutes(prisma) {
   const router = Router();
@@ -62,16 +68,12 @@ export default function podcastRoutes(prisma) {
       const podcastIds = data.map((p) => p.id);
       const countMap = {};
       if (podcastIds.length) {
-        const placeholders = podcastIds.map(() => '?').join(',');
-        const rows = await prisma.$queryRawUnsafe(
-          `SELECT "Feed"."podcastId" AS "id", COUNT("Episode"."id") AS "count"
-           FROM "Episode" JOIN "Feed" ON "Episode"."feedId" = "Feed"."id"
-           WHERE "Feed"."podcastId" IN (${placeholders})
-           GROUP BY "Feed"."podcastId"`,
-          ...podcastIds
-        );
-        for (const row of rows) {
-          countMap[row.id] = Number(row.count);
+        const feeds = await prisma.feed.findMany({
+          where: { podcastId: { in: podcastIds } },
+          select: { podcastId: true, _count: { select: { episodes: true } } },
+        });
+        for (const feed of feeds) {
+          countMap[feed.podcastId] = (countMap[feed.podcastId] || 0) + feed._count.episodes;
         }
       }
 
@@ -112,6 +114,27 @@ export default function podcastRoutes(prisma) {
     }
   });
 
+  // Raw episodes (legacy support)
+  router.get('/podcasts/raw', async (req, res) => {
+    try {
+      const { page = 1, pageSize = 20, search } = req.query;
+      const where = search ? { title: { contains: search } } : {};
+      const [data, total] = await Promise.all([
+        prisma.episode.findMany({
+          where,
+          skip: (Number(page) - 1) * Number(pageSize),
+          take: Number(pageSize),
+          orderBy: { createdAt: 'desc' },
+          include: { feed: { select: { url: true, category: true, podcastId: true } } },
+        }),
+        prisma.episode.count({ where }),
+      ]);
+      res.json({ data, total, page: Number(page), pageSize: Number(pageSize) });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Get single podcast
   router.get('/podcasts/:id', async (req, res) => {
     try {
@@ -147,10 +170,9 @@ export default function podcastRoutes(prisma) {
   });
 
   // Create podcast
-  router.post('/podcasts', async (req, res) => {
+  router.post('/podcasts', validateBody(createPodcastSchema), async (req, res) => {
     try {
       const { title, host, description, coverImage, status, categoryIds, featured, summary, language, tags } = req.body;
-      if (!title) return res.status(400).json({ error: 'Title is required' });
 
       const podcast = await prisma.podcast.create({
         data: {
@@ -182,7 +204,7 @@ export default function podcastRoutes(prisma) {
   });
 
   // Update podcast
-  router.put('/podcasts/:id', async (req, res) => {
+  router.put('/podcasts/:id', validateBody(updatePodcastSchema), async (req, res) => {
     try {
       const {
         title, host, description, coverImage, status, categoryIds,
@@ -282,12 +304,9 @@ export default function podcastRoutes(prisma) {
   });
 
   // Bulk update podcasts
-  router.post('/podcasts/bulk-update', async (req, res) => {
+  router.post('/podcasts/bulk-update', validateBody(bulkUpdatePodcastsSchema), async (req, res) => {
     try {
       const { ids, updates } = req.body;
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: 'ids array is required' });
-      }
 
       const data = {};
       if (updates.status !== undefined) data.status = updates.status;
@@ -311,27 +330,6 @@ export default function podcastRoutes(prisma) {
       }
 
       res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Raw episodes (legacy support)
-  router.get('/podcasts/raw', async (req, res) => {
-    try {
-      const { page = 1, pageSize = 20, search } = req.query;
-      const where = search ? { title: { contains: search } } : {};
-      const [data, total] = await Promise.all([
-        prisma.episode.findMany({
-          where,
-          skip: (Number(page) - 1) * Number(pageSize),
-          take: Number(pageSize),
-          orderBy: { createdAt: 'desc' },
-          include: { feed: { select: { url: true, category: true, podcastId: true } } },
-        }),
-        prisma.episode.count({ where }),
-      ]);
-      res.json({ data, total, page: Number(page), pageSize: Number(pageSize) });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
