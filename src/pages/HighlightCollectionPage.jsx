@@ -48,6 +48,7 @@ export default function HighlightCollectionPage() {
         id: highlight.episode.id,
         title: highlight.episode.title,
         audioUrl: highlight.episode.audioUrl,
+        coverImage: highlight.episode.feed?.podcast?.coverImage || '',
       });
       if (highlight.startTime > 0) {
         setTimeout(() => seek(highlight.startTime), 300);

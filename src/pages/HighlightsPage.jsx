@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Container } from '../components/layout';
 import HighlightCard from '../components/highlights/HighlightCard';
-import { Sparkles, Search, ChevronDown, Loader } from 'lucide-react';
+import { Sparkles, Search, ChevronDown, Loader, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 import { useAudio } from '../components/AudioPlayer';
 
@@ -12,6 +13,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function HighlightsPage() {
+  const navigate = useNavigate();
   const { play, seek } = useAudio();
   const [highlights, setHighlights] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -58,6 +60,7 @@ export default function HighlightsPage() {
         id: highlight.episode.id,
         title: highlight.episode.title,
         audioUrl: highlight.episode.audioUrl,
+        coverImage: highlight.episode.feed?.podcast?.coverImage || '',
       });
       if (highlight.startTime > 0) {
         setTimeout(() => seek(highlight.startTime), 300);
@@ -88,6 +91,20 @@ export default function HighlightsPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', paddingTop: 80 }}>
       <Container>
+        {/* Back button */}
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', marginBottom: 24, padding: 0,
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+        >
+          <ArrowLeft size={16} /> Back to Home
+        </button>
+
         {/* Header */}
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>

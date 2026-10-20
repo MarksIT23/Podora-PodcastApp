@@ -84,6 +84,7 @@ export default function AIHighlights() {
         id: item.episode.id,
         title: item.episode.title,
         audioUrl: item.episode.audioUrl,
+        coverImage: item.episode.feed?.podcast?.coverImage || '',
       });
       if (item.startTime > 0) {
         setTimeout(() => seek(item.startTime), 300);
