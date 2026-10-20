@@ -335,3 +335,36 @@ export async function ingestAllFeeds() {
   const res = await api.post('/admin/feeds/ingest-all');
   return res.data;
 }
+
+// ============================================
+// Review Queue
+// ============================================
+
+export async function fetchReviews({ page = 1, pageSize = 20, status = '' } = {}) {
+  const res = await api.get('/admin/reviews', { params: { page, pageSize, status } });
+  return res.data;
+}
+
+export async function createReview(data) {
+  const res = await api.post('/admin/reviews', data);
+  return res.data;
+}
+
+export async function updateReview(id, updates) {
+  const res = await api.put(`/admin/reviews/${id}`, updates);
+  return res.data;
+}
+
+export async function deleteReview(id) {
+  const res = await api.delete(`/admin/reviews/${id}`);
+  return res.data;
+}
+
+// ============================================
+// Raw Episodes Data
+// ============================================
+
+export async function fetchRawEpisodes({ page = 1, pageSize = 20, search = '' } = {}) {
+  const res = await api.get('/admin/podcasts/raw', { params: { page, pageSize, search } });
+  return res.data;
+}

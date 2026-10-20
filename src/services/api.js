@@ -32,11 +32,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const stored = localStorage.getItem('podcastai_auth');
-      // Only hard-redirect if there WAS a session (prevents intercepting login failures)
-      if (stored) {
-        localStorage.removeItem('podcastai_auth');
-        window.location.href = '/auth';
+      // Don't intercept login/register requests — those handle their own auth errors
+      const isAuthRoute = error.config?.url?.includes('/login') || error.config?.url?.includes('/register');
+      if (!isAuthRoute) {
+        const stored = localStorage.getItem('podcastai_auth');
+        if (stored) {
+          localStorage.removeItem('podcastai_auth');
+          window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
       }
     }
     return Promise.reject(error);
