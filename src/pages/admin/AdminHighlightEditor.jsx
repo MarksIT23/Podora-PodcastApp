@@ -28,8 +28,16 @@ export default function AdminHighlightEditor() {
 
   useEffect(() => {
     fetchCollections();
-    if (!isNew) loadHighlight();
-    else setLoading(false);
+    if (!isNew) {
+      if (!id || id === 'undefined') {
+        addToast('Invalid highlight ID.', 'error');
+        navigate('/admin/highlights');
+        return;
+      }
+      loadHighlight();
+    } else {
+      setLoading(false);
+    }
   }, [id]);
 
   const loadHighlight = async () => {

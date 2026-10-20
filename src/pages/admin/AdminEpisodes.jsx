@@ -37,11 +37,9 @@ export default function AdminEpisodes() {
 
   const handleTogglePublish = async (episode) => {
     try {
-      // Toggle logic would go here - for now we mock it by updating local state
-      // or calling a real API if available
-      const newStatus = !episode.published;
-      await updateAdminEpisode(episode.id, { published: newStatus });
-      addToast(`Episode ${newStatus ? 'published' : 'hidden'}.`, 'success');
+      const newStatus = episode.status === 'published' ? 'hidden' : 'published';
+      await updateAdminEpisode(episode.id, { status: newStatus });
+      addToast(`Episode ${newStatus === 'published' ? 'published' : 'hidden'}.`, 'success');
       loadEpisodes();
     } catch {
       addToast('Failed to update episode.', 'error');
