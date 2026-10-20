@@ -6,7 +6,18 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
     port: 5173,
-    host: true,
+    hmr: {
+      host: 'localhost',
+    },
+    watch: {
+      ignored: ['**/node_modules/**', '**/.git/**', '**/data/**', '**/*.db', '**/*.db-journal'],
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     target: 'esnext',

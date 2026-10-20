@@ -1,142 +1,109 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *   PODCAST PLATFORM — MASTER STARTUP SCRIPT
+ *   PODCAST PLATFORM — LAUNCH DASHBOARD
  * ═══════════════════════════════════════════════════════════════════════════
  *
- *   Launches all five processes that make up the decoupled platform:
- *
- *   1. Main API Server      (Express + SQLite)     → Port 3002
- *   2. Webhook Gateway       (Express relay)        → Port 3100
- *   3. Admin System          (Next.js + SQLite)     → Port 3003
- *   4. Editor Backend        (Express + MongoDB)    → Port 3005
- *   5. Editor Frontend       (Vue 3 + Vite)         → Port 3004
- *   6. Public User Frontend  (React + Vite)         → Port 5173
+ *   Shows which services are running, their URLs, and connection strings.
+ *   Does NOT spawn processes (avoids duplicate conflicts).
  *
  *   Usage:  node start-all.js
- *   Stop:   Ctrl+C (kills all child processes)
  */
 
-import { spawn } from 'child_process';
-import path from 'path';
+import net from 'net';
+import http from 'http';
 import { fileURLToPath } from 'url';
+import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const reset = '\x1b[0m';
 
-const processes = [
-  {
-    name: 'Main API (SQLite)',
-    cmd: 'node',
-    args: ['index.js'],
-    cwd: path.join(__dirname, 'server'),
-    color: '\x1b[36m', // cyan
-  },
-  {
-    name: 'Webhook Gateway',
-    cmd: 'node',
-    args: ['index.js'],
-    cwd: path.join(__dirname, 'gateway'),
-    color: '\x1b[33m', // yellow
-  },
-  {
-    name: 'Admin (Next.js)',
-    cmd: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    args: ['run', 'dev'],
-    cwd: path.join(__dirname, 'subsystems', 'admin-next'),
-    color: '\x1b[34m', // blue
-  },
-  {
-    name: 'Editor Backend (MongoDB)',
-    cmd: 'node',
-    args: ['server.js'],
-    cwd: path.join(__dirname, 'subsystems', 'editor-vue'),
-    color: '\x1b[32m', // green
-  },
-  {
-    name: 'Editor Frontend (Vue)',
-    cmd: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    args: ['run', 'dev'],
-    cwd: path.join(__dirname, 'subsystems', 'editor-vue'),
-    color: '\x1b[35m', // magenta
-  },
-  {
-    name: 'Public App (React)',
-    cmd: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    args: ['run', 'dev'],
-    cwd: __dirname,
-    color: '\x1b[95m', // bright magenta
-  },
+const services = [
+  { name: 'Admin API Server',       port: 3002, cmd: 'node index.js',         cwd: 'server',          color: '\x1b[36m', url: 'http://localhost:3002/api/health' },
+  { name: 'Editor Server (MongoDB)', port: 3003, cmd: 'node editor/index.js',  cwd: 'server',          color: '\x1b[32m', url: 'http://localhost:3003' },
+  { name: 'Frontend (React + Vite)', port: 5173, cmd: 'npm run dev',           cwd: 'D:\\PODCAST',     color: '\x1b[95m', url: 'http://localhost:5173' },
+  { name: 'Prisma Studio',          port: 5555, cmd: 'npx prisma studio',     cwd: 'server',          color: '\x1b[33m', url: 'http://localhost:5555' },
 ];
 
-const reset = '\x1b[0m';
-const children = [];
-
-console.log('\x1b[1m\x1b[97m');
-console.log('═══════════════════════════════════════════════════════════════');
-console.log('  PODCAST PLATFORM — MULTI-SYSTEM LAUNCHER');
-console.log('═══════════════════════════════════════════════════════════════');
-console.log(reset);
-console.log('  Starting all subsystems...\n');
-
-for (const proc of processes) {
-  const child = spawn(proc.cmd, proc.args, {
-    cwd: proc.cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    shell: true,
+function checkPort(port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1000);
+    socket.on('connect', () => { socket.destroy(); resolve(true); });
+    socket.on('timeout', () => { socket.destroy(); resolve(false); });
+    socket.on('error', () => resolve(false));
+    socket.connect(port, '127.0.0.1');
   });
-
-  child.stdout.on('data', (data) => {
-    const lines = data.toString().trim().split('\n');
-    for (const line of lines) {
-      console.log(`${proc.color}[${proc.name}]${reset} ${line}`);
-    }
-  });
-
-  child.stderr.on('data', (data) => {
-    const lines = data.toString().trim().split('\n');
-    for (const line of lines) {
-      // Filter out noisy npm warnings
-      if (line.includes('npm warn') || line.includes('npm WARN')) return;
-      console.log(`${proc.color}[${proc.name}]${reset} ${line}`);
-    }
-  });
-
-  child.on('error', (err) => {
-    console.error(`${proc.color}[${proc.name}]${reset} \x1b[31mFailed to start: ${err.message}${reset}`);
-  });
-
-  child.on('exit', (code) => {
-    if (code !== null && code !== 0) {
-      console.log(`${proc.color}[${proc.name}]${reset} \x1b[31mExited with code ${code}${reset}`);
-    }
-  });
-
-  children.push(child);
-  console.log(`  ${proc.color}✓${reset} ${proc.name} starting in ${proc.cwd}`);
 }
 
-console.log(`\n\x1b[1m  All ${processes.length} processes launched.\x1b[0m`);
-console.log('\n  ┌──────────────────────────────────────────────────────┐');
-console.log('  │  Admin System (Next.js + SQLite):   http://localhost:3003  │');
-console.log('  │  Editor Frontend (Vue + MongoDB):   http://localhost:3004  │');
-console.log('  │  Editor Backend API:                http://localhost:3005  │');
-console.log('  │  Public User App (React + Vite):    http://localhost:5173  │');
-console.log('  │  Main API Server:                   http://localhost:3002  │');
-console.log('  │  Webhook Gateway:                   http://localhost:3100  │');
-console.log('  └──────────────────────────────────────────────────────┘');
-console.log('\n  Press Ctrl+C to stop all processes.\n');
+function fetchJson(url) {
+  return new Promise((resolve) => {
+    http.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve(null); } });
+    }).on('error', () => resolve(null));
+  });
+}
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n\x1b[33m  Shutting down all subsystems...\x1b[0m');
-  for (const child of children) {
-    child.kill('SIGTERM');
-  }
-  process.exit(0);
-});
+function bold(text)  { return `\x1b[1m${text}${reset}`; }
+function green(text) { return `\x1b[32m${text}${reset}`; }
+function red(text)   { return `\x1b[31m${text}${reset}`; }
+function dim(text)   { return `\x1b[2m${text}${reset}`; }
+function cyan(text)  { return `\x1b[36m${text}${reset}`; }
 
-process.on('SIGTERM', () => {
-  for (const child of children) {
-    child.kill('SIGTERM');
+console.log(bold('\n╔══════════════════════════════════════════════════════════╗'));
+console.log(bold('║         PODCAST PLATFORM — LAUNCH DASHBOARD            ║'));
+console.log(bold('╚══════════════════════════════════════════════════════════╝\n'));
+
+const results = await Promise.all(services.map(async (s) => {
+  const running = await checkPort(s.port);
+  return { ...s, running };
+}));
+
+// Fetch MongoDB URI from editor server if running
+let mongoUri = null;
+const editor = results.find(s => s.name === 'Editor Server (MongoDB)');
+if (editor?.running) {
+  const health = await fetchJson('http://localhost:3003/api/editor/health');
+  mongoUri = health?.mongoUri || null;
+}
+
+for (const s of results) {
+  const status = s.running ? green('● RUNNING') : red('○ STOPPED');
+  const cmd = s.running ? dim(s.cmd) : bold(s.cmd);
+  console.log(`  ${s.color}${s.name.padEnd(28)}${reset} ${status}`);
+  console.log(`  ${dim('→'.padEnd(28))} ${s.url}`);
+  console.log(`  ${dim('  '.padEnd(28))} ${cmd}`);
+  console.log('');
+}
+
+// Extra: MongoDB Compass connection
+if (mongoUri) {
+  console.log(`  ${cyan('MongoDB Compass')}${' '.repeat(15)} ${bold(mongoUri)}`);
+  console.log(`  ${dim('→'.padEnd(28))} ${dim('Paste that URI into MongoDB Compass to browse the editor database')}`);
+  console.log('');
+} else if (editor?.running) {
+  console.log(`  ${cyan('MongoDB Compass')}${' '.repeat(15)} ${bold('Restart editor server to see URI')}`);
+  console.log('');
+}
+
+console.log(bold('  ─── QUICK START ───\n'));
+
+const stopped = results.filter(s => !s.running);
+if (stopped.length === 0) {
+  console.log(green('  All services running! Open the links above.\n'));
+} else {
+  console.log('  Start in this order:\n');
+  const order = ['Admin API Server', 'Editor Server (MongoDB)', 'Frontend (React + Vite)', 'Prisma Studio'];
+  let step = 1;
+  for (const name of order) {
+    const s = stopped.find(sv => sv.name === name);
+    if (s) {
+      console.log(`  ${step}. cd ${s.cwd}`);
+      console.log(`     ${s.cmd}`);
+      step++;
+    }
   }
-  process.exit(0);
-});
+  console.log('');
+  console.log(dim('  Or start all at once in separate terminal windows.\n'));
+}
